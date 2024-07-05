@@ -1,0 +1,17 @@
+{
+  "name": "my-youtube",
+  "version": "1.0.0",
+  "description": "A production grade  mega project by Hemant",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "javascript",
+    "youtube",
+    "backend",
+    "frontend"
+  ],
+  "author": "HEMANT SUTHAR",
+  "license": "ISC"
+}
