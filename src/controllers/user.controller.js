@@ -8,18 +8,6 @@ const registerUser = asyncHandler( async (req, res) => {
     console.log("ALERT !!! Someone visited /users/register ROUTE")
 
 
-    // MY LOGIC FOR registerUser :
-    // Step-1 = get the username, password, email, fullname, avatar(user profile picture). which should be sent in the headers or body of the request.
-
-    // Step-2 = validate the input like is username unique, is email unique, does email is as it should be i.e. <someName>@gmail/yahoo/etc.com or not, is the avatar image too big for storage, etc
-
-    // Step-3 = if the user is not sending details in the right manner then return some error messages
-
-    // Step-4 = Now we need to check that the user already exists or not which will be checked in the first step but probably here we need to make a database call to find all the users and see it the user already exists or not. if it doesn't exists then move on to next step
-
-    // Step-5 = once we have validated all the user inputs then we need to actually register the user in the database via some database queries
-
-
     // LOGIC FOR registerUser:
     // 1. get user details from frontend
     // 2. perform validations like is any field empty, is email is in correct format, etc
@@ -33,10 +21,10 @@ const registerUser = asyncHandler( async (req, res) => {
 
 
 
-
-
-
+    // get user details
     const {username, fullname, password, email} = req.body
+
+    
 
     // Validation for empty values :
     if (
@@ -45,20 +33,25 @@ const registerUser = asyncHandler( async (req, res) => {
         throw new ApiError(400, "You Cannot Provide Empty Fields")
     } // Tested successfully for empty values and values with just whitespaces
 
+
+
+
     // Add more validations here continuing with if statements
 
 
+
+
     // Check if the user already exists:
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or : [{username},{email}]
     })
 
-    //console.log(existedUser);
 
+    console.log(existedUser);
 
-    // if (existedUser) {
-    //     throw new ApiError(409, "The user with this username or email already exists")
-    // }
+    if (existedUser) {
+        throw new ApiError(409, "The user with this username or email already exists")
+    }
 
     // ************** TODO TASK : Separate the checking of username and email, give responses accordingly ********************************************
 
@@ -66,11 +59,10 @@ const registerUser = asyncHandler( async (req, res) => {
 
 
 
-
     // Handling files
-
     const avatarLocalPath = req.files?.avatar[0]?.path  
     const coverImageLocalPath = req.files?.coverImage[0]?.path 
+
    
     if (!avatarLocalPath) {
         throw new ApiError(400, "Avatar file is required")
@@ -84,24 +76,31 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
 
+
+    // create user
     const user = await User.create({
         username: username.toLowerCase(),
         email: email.toLowerCase(),
         password,
-        fullname,
+        fullName: fullname,
         avatar: avatar.url,
         coverImage: coverImage?.url || ""
 
     })
 
 
+    // check if user is created 
     const createdUser = await User.findById(user._id).select("-password -refreshToken")
+
+    console.log(createdUser);
 
     if (!createdUser) {
         throw new ApiError(500, "Something went wrong while registering the user")
     }
 
 
+
+    // if everything goes well, send the response
     return res.status(201).json(
         new ApiResponse(201, createdUser, "User registered Successfully")
     )
