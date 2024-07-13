@@ -6,7 +6,6 @@ import { User } from "../models/user.models.js";
 
 export const verifyJWT = asyncHandler( async (req, _, next) => {
     try {
-        console.log(req.cookies)
         const token =  req.cookies?.AccessToken || req.header("Authorization")?.replace("Bearer ","");
 
         // the access token and refresh token names are not setting properly in cookies, there is a space added and a name that i did not wrote anywhere
