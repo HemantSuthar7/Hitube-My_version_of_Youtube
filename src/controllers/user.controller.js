@@ -274,8 +274,6 @@ const logoutUser = asyncHandler( async (req, res) => {
 
 
 
-
-
 // Logic for refreshing access token 
 
 const refreshAccessToken = asyncHandler(async (req, res)=> {
@@ -335,6 +333,8 @@ const refreshAccessToken = asyncHandler(async (req, res)=> {
     }
 
 })
+
+
 
 
 
