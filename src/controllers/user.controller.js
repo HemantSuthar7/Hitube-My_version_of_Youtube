@@ -17,7 +17,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
         const refreshToken = await user.generateRefreshToken()
 
-        user.refreshToken = userRefreshToken
+        user.refreshToken = refreshToken
         user.save({ validateBeforeSave : false})
 
         return {accessToken, refreshToken}
@@ -279,7 +279,12 @@ const logoutUser = asyncHandler( async (req, res) => {
 // Logic for refreshing access token 
 
 const refreshAccessToken = asyncHandler(async (req, res)=> {
+
+    console.log("SOMEONE REQUESTED FOR REFRESHING ACCESS TOKEN");
+
     const incomingRefreshToken = req.cookies.RefreshToken || req.body.RefreshToken
+
+    console.log(incomingRefreshToken);
 
     if (!incomingRefreshToken) {
        throw new ApiError(401, "Unauthorized Request") 
