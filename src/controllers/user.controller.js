@@ -3,6 +3,7 @@ import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.models.js"
 import {uploadOnCloudinary} from "../utils/FileUpload.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
+import JWT from "jsonwebtoken"
 
 
 
@@ -12,14 +13,14 @@ const generateAccessAndRefreshToken = async (userId) => {
 
         const user = await User.findById(userId);
 
-        const userAccessToken = await user.generateAccessToken()
+        const accessToken = await user.generateAccessToken()
 
-        const userRefreshToken = await user.generateRefreshToken()
+        const refreshToken = await user.generateRefreshToken()
 
         user.refreshToken = userRefreshToken
         user.save({ validateBeforeSave : false})
 
-        return {userAccessToken, userRefreshToken}
+        return {accessToken, refreshToken}
 
         
     } catch (error) {
@@ -45,13 +46,18 @@ const registerUser = asyncHandler( async (req, res) => {
 
 
     // get user details
-    const {username, fullname, password, email} = req.body
+    const {username, fullName, password, email} = req.body
+
+    console.log(username);
+    console.log(fullName);
+    console.log(password);
+    console.log(email);
 
 
 
     // Validation for empty values :
     if (
-        [username, fullname, password, email].some( (field) => field?.trim() === ""  ) // using some method to check for true condition on each field of the array
+        [username, fullName, password, email].some( (field) => field?.trim() === ""  ) // using some method to check for true condition on each field of the array
     ) {
         throw new ApiError(400, "You Cannot Provide Empty Fields")
     } // Tested successfully for empty values and values with just whitespaces
@@ -83,8 +89,10 @@ const registerUser = asyncHandler( async (req, res) => {
 
 
     // Handling files
-    const avatarLocalPath = req.files?.avatar[0]?.path  
+    const avatarLocalPath = req.files?.avatar[0]?.path
+    console.log(avatarLocalPath);  
     const coverImageLocalPath = req.files?.coverImage[0]?.path 
+    console.log(coverImageLocalPath);
 
     // The best method to check if coverImage exists or not. same can be done for avatar
     // let coverImageLocalPath;
@@ -111,7 +119,7 @@ const registerUser = asyncHandler( async (req, res) => {
         username: username.toLowerCase(),
         email: email.toLowerCase(),
         password,
-        fullName: fullname,
+        fullName: fullName,
         avatar: avatar.url,
         coverImage: coverImage?.url || ""
 
@@ -144,6 +152,8 @@ const registerUser = asyncHandler( async (req, res) => {
 
 const loginUser = asyncHandler( async (req, res) => {
 
+    console.log(`Someone requested for login`);
+
 
     // Login Algorithm
 
@@ -165,12 +175,16 @@ const loginUser = asyncHandler( async (req, res) => {
 
 
     // getting data 
-    const {username, email, password} = req.body
+    const {username, password, email} = req.body // is not working when sending in form data, only working when sending in raw json data 
+
+    console.log(username);
+    console.log(email);
+    console.log(password);
 
 
 
     // check if we got username & email
-    if (!username || !email) {
+    if (!(username || email)) {
         throw new ApiError(400, "Username or email is required")
     }
 
@@ -196,7 +210,7 @@ const loginUser = asyncHandler( async (req, res) => {
 
 
     // genetate access token and refresh token 
-    const {userAccessToken, userRefreshToken} = await generateAccessAndRefreshToken(existingUser._id)
+    const {accessToken, refreshToken} = await generateAccessAndRefreshToken(existingUser._id)
 
     // send cookie
 
@@ -210,13 +224,13 @@ const loginUser = asyncHandler( async (req, res) => {
 
     return res
     .status(200)
-    .cookie("Access Token", userAccessToken, cookieOptions)
-    .cookie("Refresh Token", userRefreshToken, cookieOptions)
+    .cookie("AccessToken", accessToken, cookieOptions)
+    .cookie("RefreshToken", refreshToken, cookieOptions)
     .json(
         new ApiResponse(
         200,
         {
-            user: loggedInUser, userAccessToken, userRefreshToken
+            user: loggedInUser, accessToken, refreshToken
         },
         "User logged in successfully"
         )
@@ -249,8 +263,8 @@ const logoutUser = asyncHandler( async (req, res) => {
 
     return res
     .status(200)
-    .clearCookie("Access Token", cookieOptions)
-    .clearCookie("Refresh Token", cookieOptions)
+    .clearCookie("AccessToken", cookieOptions)
+    .clearCookie("RefreshToken", cookieOptions)
     .json(
         new ApiResponse(200, {}, "user logged out successfully")
     )
@@ -259,4 +273,65 @@ const logoutUser = asyncHandler( async (req, res) => {
 
 
 
-export {registerUser, loginUser, logoutUser};
+
+
+
+// Logic for refreshing access token 
+
+const refreshAccessToken = asyncHandler(async (req, res)=> {
+    const incomingRefreshToken = req.cookies.RefreshToken || req.body.RefreshToken
+
+    if (!incomingRefreshToken) {
+       throw new ApiError(401, "Unauthorized Request") 
+    }
+
+    try {
+        const decodedToken = JWT.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+    
+    
+        const user = await User.findById(decodedToken?._id)
+    
+        if (!user) {
+            throw new ApiError(401, "Invalid Refresh token")
+        }
+    
+    
+        if (incomingRefreshToken !== user?.refreshToken){
+            throw new ApiError(401, "Refresh token is invalid or expired")
+            
+        }
+    
+    
+        const cookieOptions = {
+            httpOnly: true,
+            secure: true
+        }
+    
+        const {accessToken, newRefreshToken} = await generateAccessAndRefreshToken(user._id)
+    
+        return res
+        .status(200)
+        .cookie("AccessToken", accessToken, cookieOptions)
+        .cookie("RefreshToken", newRefreshToken, cookieOptions)
+        .json(
+            new ApiResponse(
+                200,
+                {
+                    accessToken, refreshToken : newRefreshToken
+                },
+                "Access Token refreshed successfully"
+            )
+        )
+    } catch (error) {
+        throw new ApiError(401, error?.message || "Invalid refresh token")
+    }
+
+})
+
+
+
+
+export {registerUser, loginUser, logoutUser, refreshAccessToken};
