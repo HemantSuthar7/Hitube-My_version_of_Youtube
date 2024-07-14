@@ -86,6 +86,9 @@ const registerUser = asyncHandler( async (req, res) => {
 
 
 
+    // we have to make sure that when handling images , we recieve only and only images and not any other file type like video or audio
+    // However we can control this in frontend via pure HTML only, so just make sure the frontend dev meets this requirement
+
 
 
     // Handling files
@@ -467,6 +470,11 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
         )
     )
 
+
+    // TODO:  Now we want to delete old image from cloudinary - we can create an utility function for deleting images from cloudinary via its url
+    // Hint : destroy method from cloudinary
+
+
 } )
 
 
@@ -510,6 +518,8 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
         )
     )
 
+
+    // TODO:  Now we want to delete old image from cloudinary
 } )
 
 
@@ -519,10 +529,10 @@ export {
     loginUser, 
     logoutUser, 
     refreshAccessToken,
-    changeCurrentPassword,
-    getCurrentUser,
-    updateAccountDetails,
-    updateUserAvatar,
-    updateUserCoverImage
+    changeCurrentPassword, // test this method first
+    getCurrentUser, // test this method first
+    updateAccountDetails, // test this method first
+    updateUserAvatar, // test this method first
+    updateUserCoverImage // test this method first
 };
 
