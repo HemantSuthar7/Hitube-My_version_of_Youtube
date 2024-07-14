@@ -474,6 +474,12 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
     // TODO:  Now we want to delete old image from cloudinary - we can create an utility function for deleting images from cloudinary via its url
     // Hint : destroy method from cloudinary
 
+    // we need public id to destroy the image. and the public id is already present in the avatar url in database
+    // we would want to apply some regex on url and get the public id from it .
+    // And then we would just delete the image via the public id.
+
+    
+
 
 } )
 
