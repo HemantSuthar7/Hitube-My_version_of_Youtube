@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import {ApiError} from "../utils/ApiError.js"
 import {User} from "../models/user.models.js"
 import {uploadOnCloudinary} from "../utils/FileUpload.js"
+import {deleteFromCloudinary} from "../utils/FileDelete.js"
 import {ApiResponse} from "../utils/ApiResponse.js"
 import JWT from "jsonwebtoken"
 
@@ -92,12 +93,12 @@ const registerUser = asyncHandler( async (req, res) => {
 
 
     // Handling files
-    const avatarLocalPath = req.files?.avatar[0]?.path
-    console.log(avatarLocalPath);  
+    const avatarLocalPath = req.files?.avatar[0]?.path  
+
     const coverImageLocalPath = req.files?.coverImage[0]?.path 
-    console.log(coverImageLocalPath);
 
     // The best method to check if coverImage exists or not. same can be done for avatar
+
     // let coverImageLocalPath;
     // if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
     //     coverImageLocalPath = req.files.coverImage[0].path
@@ -377,6 +378,10 @@ const getCurrentUser = asyncHandler( async (req, res) => {
 
     const user = req.user
 
+    if (!user) {
+        throw new ApiError(201, "Unauthorized request for getting user")
+    }
+
     return res
     .status(200)
     .json(
@@ -400,15 +405,44 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
     const {fullName, email} = req.body
 
     if (!fullName || !email) {
-        throw new ApiError(200, "Fullname and email are required")
+        throw new ApiError(400, "Fullname and email are required")
     }
+
+    // Trim fullName
+    const trimmedFullName = fullName.trim(); 
+
+    if(trimmedFullName === ""){
+        throw new ApiError(400, "You cannot provide an empty fullName")
+    }
+
+    // Trim email
+    const trimmedEmail = email.trim();
+
+    if (trimmedEmail === "") {
+        throw new ApiError(400, "You cannot provide an empty email")
+    }
+
+
+    // Validate email pattern
+    const pattern = "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
+    const emailToBeMatched = trimmedEmail.match(pattern);
+    
+    if (emailToBeMatched === null) {
+        throw new ApiError(400, "Email pattern is Invalid")
+    }
+
+    const matchedEmail = emailToBeMatched[0]
+
+    // WE NEED TO CHECK IF DETAILS TO BE UPDATED ARE EXACTLY SAME AS THE DETAILS IN THE DATABASE.
+    // if the they are same then we need to alert the user and do not proceed
+   
 
     const user = await User.findByIdAndUpdate(
         req.user._id,
         {
             $set: {
-                fullName,
-                email
+                fullName: trimmedFullName,
+                email: matchedEmail
             }
         },
         {new: true}
@@ -435,7 +469,7 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
 
 const updateUserAvatar = asyncHandler( async (req, res) => {
 
-    const avatarLocalPath = req.file?.path
+    const avatarLocalPath = req.files?.avatar[0]?.path
 
     if (!avatarLocalPath) {
         throw new ApiError(400, "Please upload new avatar image")
@@ -449,6 +483,15 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
 
     const avatarUrl = avatar.url
 
+
+    // first make a db call to get the user details and get the old URL and store it in a varible.
+    
+    const oldUserDetails = await User.findById(req.user?._id);
+
+    const OldAvatarUrl = oldUserDetails.avatar
+
+
+
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -460,23 +503,45 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
     ).select("-password")
 
 
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(
-            200,
-            {user},
-            "Avatar updated successfully"
-        )
-    )
-
-
     // TODO:  Now we want to delete old image from cloudinary - we can create an utility function for deleting images from cloudinary via its url
-    // Hint : destroy method from cloudinary
+    // method : destroy method from cloudinary
 
     // we need public id to destroy the image. and the public id is already present in the avatar url in database
     // we would want to apply some regex on url and get the public id from it .
     // And then we would just delete the image via the public id.
+
+    // LOGIC FOR DELETING THE OLD FILE FROM CLOUDINARY AFTER SUCCESSFULLY UPDATING THE IMAGE
+
+    // THE URL IS : http://res.cloudinary.com/dscpmgvab/image/upload/v1720971474/w4ea80wfgmljorywh99j.jpg
+    // HERE :                                                                    ^this is public_id ^        and i want just this section
+
+    
+
+    const regex = /\/upload\/[^\/]+\/([^\/]+)\./;
+    const match = OldAvatarUrl.match(regex);
+    const public_id = match[1];
+
+    console.log(public_id);
+
+    
+
+    const deleteResponse = await deleteFromCloudinary(public_id, "image")
+
+    console.log(deleteResponse);
+
+    if (deleteResponse?.result === "ok") {
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
+            200,
+            {user},
+            "Avatar updated successfully"
+            )
+        )
+    } else {
+        throw new ApiError(500, "There was an error while deleting the old avatar file")
+    }
 
     
 
@@ -524,6 +589,20 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
         )
     )
 
+    /*  EXAMPLE REGEX : 
+
+        $url = 'https://res.cloudinary.com/some-org/video/upload/v1594889564/some-video';
+
+        preg_match("/upload\/(?:v\d+\/)?([^\.]+)/", $url, $matches);
+
+        // $matches[1] contains "some-video"
+
+        // works also for 
+        "https://res.cloudinary.com/some-org/image/upload/v1594889564/some-image.png" === "some-image"
+        "https://res.cloudinary.com/some-org/raw/upload/v1594889564/some-thing.foobar" === "some-thing"
+        "https://res.cloudinary.com/some-org/raw/upload/some-thing.foobar" === "some-thing"
+
+    */
 
     // TODO:  Now we want to delete old image from cloudinary
 } )
@@ -535,10 +614,29 @@ export {
     loginUser, 
     logoutUser, 
     refreshAccessToken,
-    changeCurrentPassword, // test this method first
-    getCurrentUser, // test this method first
-    updateAccountDetails, // test this method first
-    updateUserAvatar, // test this method first
-    updateUserCoverImage // test this method first
+    changeCurrentPassword,
+    getCurrentUser, 
+    updateAccountDetails,
+    updateUserAvatar, 
+    updateUserCoverImage // incomplete -- TESTING WILL BE DONE AFTER COMPLETION
 };
 
+
+
+// +++++++++++++++++++++++++++++++++++++++++IMPORTANT++++++++++++++++++++++++++++++++++++++++++
+
+/* SOME MORE FEATURES TO IMPLEMENT: 
+
+
+        1. Check for empty fields where you need input
+
+        2. Check the email pattern where we are handling emails
+
+        3. If we are updating some details from the database then we need to check that the details to be updated should not be equal to the details that already exists in the database. 
+
+        4. when updating images make sure that you are deleting the old images after successfully updating the images.
+
+        5. Do not let the user see the database errors. Handle as much errors as possible
+
+        6. Try to implement a forgot password method
+*/

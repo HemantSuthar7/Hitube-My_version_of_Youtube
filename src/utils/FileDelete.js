@@ -7,7 +7,6 @@ cloudinary.config({
 });
 
 
-// the parameters for deleting : public_id , resource_type
 
 const deleteFromCloudinary = async (public_id, resource_type) => {
 
