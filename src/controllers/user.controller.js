@@ -554,7 +554,7 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
 
 const updateUserCoverImage = asyncHandler( async (req, res) => {
 
-    const coverImageLocalPath = req.file?.path
+    const coverImageLocalPath = req.files?.coverImage[0]?.path
 
     if (!coverImageLocalPath) {
         throw new ApiError(400, "Please upload new avatar image")
@@ -568,6 +568,12 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
 
     const coverImageUrl = coverImage.url
 
+
+    const oldUserDetails = await User.findById(req.user?._id);
+
+    const OldcoverImageUrl = oldUserDetails.coverImage
+
+
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -579,32 +585,30 @@ const updateUserCoverImage = asyncHandler( async (req, res) => {
     ).select("-password")
 
 
-    return res
-    .status(200)
-    .json(
-        new ApiResponse(
+
+
+    const regex = /\/upload\/[^\/]+\/([^\/]+)\./;
+    const match = OldcoverImageUrl.match(regex);
+    const public_id = match[1];
+
+
+
+    const deleteResponse = await deleteFromCloudinary(public_id, "image")
+
+
+    if (deleteResponse?.result === "ok") {
+        return res
+        .status(200)
+        .json(
+            new ApiResponse(
             200,
             {user},
             "Cover Image updated successfully"
+            )
         )
-    )
-
-    /*  EXAMPLE REGEX : 
-
-        $url = 'https://res.cloudinary.com/some-org/video/upload/v1594889564/some-video';
-
-        preg_match("/upload\/(?:v\d+\/)?([^\.]+)/", $url, $matches);
-
-        // $matches[1] contains "some-video"
-
-        // works also for 
-        "https://res.cloudinary.com/some-org/image/upload/v1594889564/some-image.png" === "some-image"
-        "https://res.cloudinary.com/some-org/raw/upload/v1594889564/some-thing.foobar" === "some-thing"
-        "https://res.cloudinary.com/some-org/raw/upload/some-thing.foobar" === "some-thing"
-
-    */
-
-    // TODO:  Now we want to delete old image from cloudinary
+    } else {
+        throw new ApiError(500, "There was an error while deleting the old Cover Image file")
+    }
 } )
 
 
@@ -618,7 +622,7 @@ export {
     getCurrentUser, 
     updateAccountDetails,
     updateUserAvatar, 
-    updateUserCoverImage // incomplete -- TESTING WILL BE DONE AFTER COMPLETION
+    updateUserCoverImage
 };
 
 
