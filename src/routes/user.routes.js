@@ -1,12 +1,16 @@
 import { Router } from "express";
-import { registerUser,
+
+import {    registerUser,
             loginUser, 
             logoutUser, 
             refreshAccessToken, 
             changeCurrentPassword, 
             getCurrentUser,
             updateAccountDetails,
-            updateUserAvatar } from "../controllers/user.controller.js";
+            updateUserAvatar,
+            updateUserCoverImage 
+        } from "../controllers/user.controller.js";
+
 import {upload} from "../middlewares/multer.middleware.js"
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 
@@ -68,7 +72,27 @@ userRouter.route("/update-user-avatar").post(verifyJWT,
             maxCount: 1
         }
     ])
-    ,updateUserAvatar)
+    ,updateUserAvatar
+)
+
+
+
+// UPDATE USER COVER IMAGE
+userRouter.route("/update-user-cover-image").post(verifyJWT, 
+    upload.fields([
+        {
+            name: "avatar",
+            maxCount: 1
+        },
+        {
+            name: "coverImage",
+            maxCount: 1
+        }
+    ])
+    ,updateUserCoverImage
+)
+
+
 
 
 export default userRouter;
