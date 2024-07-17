@@ -32,8 +32,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 
 const registerUser = asyncHandler( async (req, res) => {
-    console.log("ALERT !!! Someone visited /users/register ROUTE")
-
+    
     // LOGIC FOR registerUser:
     // 1. get user details from frontend
     // 2. perform validations like is any field empty, is email is in correct format, etc
@@ -49,12 +48,6 @@ const registerUser = asyncHandler( async (req, res) => {
     // get user details
     const {username, fullName, password, email} = req.body
 
-    console.log(username);
-    console.log(fullName);
-    console.log(password);
-    console.log(email);
-
-
 
     // Validation for empty values :
     if (
@@ -66,7 +59,7 @@ const registerUser = asyncHandler( async (req, res) => {
 
 
 
-    // Add more validations here continuing with if statements
+    // Add more validations like checking email pattern via regex, some constraints for password like minimum 8 chars, etc.  continuing with if statements
 
 
 
@@ -156,8 +149,6 @@ const registerUser = asyncHandler( async (req, res) => {
 
 const loginUser = asyncHandler( async (req, res) => {
 
-    console.log(`Someone requested for login`);
-
 
     // Login Algorithm
 
@@ -171,20 +162,17 @@ const loginUser = asyncHandler( async (req, res) => {
 
 
 
-
-
-
-
-
-
-
     // getting data 
     const {username, password, email} = req.body // is not working when sending in form data, only working when sending in raw json data 
 
-    console.log(username);
-    console.log(email);
-    console.log(password);
+    
+    if (
+        [username,  password, email].some( (field) => field?.trim() === ""  ) // using some method to check for true condition on each field of the array
+    ) {
+        throw new ApiError(400, "You Cannot Provide Empty Fields")
+    } 
 
+    // add email regex here
 
 
     // check if we got username & email
@@ -282,8 +270,6 @@ const logoutUser = asyncHandler( async (req, res) => {
 
 const refreshAccessToken = asyncHandler(async (req, res)=> {
 
-    console.log("SOMEONE REQUESTED FOR REFRESHING ACCESS TOKEN");
-
     const incomingRefreshToken = req.cookies.RefreshToken || req.body.RefreshToken
 
     console.log(incomingRefreshToken);
@@ -346,6 +332,13 @@ const changeCurrentPassword = asyncHandler( async (req, res) => {
 
     const {oldPassword, newPassword} = req.body
 
+
+    if (
+        [oldPassword, newPassword].some( (field) => field?.trim() === ""  ) // using some method to check for true condition on each field of the array
+    ) {
+        throw new ApiError(400, "You Cannot Provide Empty password")
+    }
+
     const user = await User.findById(req.user?._id)
 
     const isPasswordCorrect =  await user.isPasswordCorrect(oldPassword)
@@ -354,8 +347,8 @@ const changeCurrentPassword = asyncHandler( async (req, res) => {
         throw new ApiError(400, "Password is invalid")
     }
 
-
     user.password = newPassword
+
     await user.save({validateBeforeSave: false})
 
     return res
@@ -404,28 +397,21 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
 
     const {fullName, email} = req.body
 
+    if (
+        [fullName, email].some( (field) => field?.trim() === ""  ) // using some method to check for true condition on each field of the array
+    ) {
+        throw new ApiError(400, "You Cannot Provide Empty email or fullname")
+    }
+
     if (!fullName || !email) {
         throw new ApiError(400, "Fullname and email are required")
     }
 
-    // Trim fullName
-    const trimmedFullName = fullName.trim(); 
-
-    if(trimmedFullName === ""){
-        throw new ApiError(400, "You cannot provide an empty fullName")
-    }
-
-    // Trim email
-    const trimmedEmail = email.trim();
-
-    if (trimmedEmail === "") {
-        throw new ApiError(400, "You cannot provide an empty email")
-    }
-
+    
 
     // Validate email pattern
     const pattern = "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
-    const emailToBeMatched = trimmedEmail.match(pattern);
+    const emailToBeMatched = email.match(pattern);
     
     if (emailToBeMatched === null) {
         throw new ApiError(400, "Email pattern is Invalid")
@@ -441,7 +427,7 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
         req.user._id,
         {
             $set: {
-                fullName: trimmedFullName,
+                fullName: fullName,
                 email: matchedEmail
             }
         },
@@ -554,8 +540,8 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
 
 const updateUserCoverImage = asyncHandler( async (req, res) => {
 
-    const coverImageLocalPath = req.files?.coverImage[0]?.path
-
+    const coverImageLocalPath = req.files?.coverImage[0]?.path // if file is not present then this gives a fatal error of type error : reading properties of null/undefined
+    
     if (!coverImageLocalPath) {
         throw new ApiError(400, "Please upload new avatar image")
     }
@@ -632,9 +618,9 @@ export {
 /* SOME MORE FEATURES TO IMPLEMENT: 
 
 
-        1. Check for empty fields where you need input
+        1. Check for empty fields where you need input as well as check for images - if images are not supplied at the first place.
 
-        2. Check the email pattern where we are handling emails
+        2. Check the email pattern where we are handling emails via email regex
 
         3. If we are updating some details from the database then we need to check that the details to be updated should not be equal to the details that already exists in the database. 
 
