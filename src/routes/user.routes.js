@@ -8,7 +8,9 @@ import {    registerUser,
             getCurrentUser,
             updateAccountDetails,
             updateUserAvatar,
-            updateUserCoverImage 
+            updateUserCoverImage,
+            getUserChannelProfile,
+            getWatchHistory
         } from "../controllers/user.controller.js";
 
 import {upload} from "../middlewares/multer.middleware.js"
@@ -62,37 +64,28 @@ userRouter.route("/update-account-details").patch(verifyJWT, updateAccountDetail
 
 // UPDATE USER AVATAR
 userRouter.route("/update-user-avatar").patch(verifyJWT, 
-    upload.fields([
-        {
-            name: "avatar",
-            maxCount: 1
-        },
-        {
-            name: "coverImage",
-            maxCount: 1
-        }
-    ])
-    ,updateUserAvatar
+    upload.single("avatar"),
+    updateUserAvatar
 )  // patch or post ?????????????????????????????????????????????
 
 
 
 // UPDATE USER COVER IMAGE
 userRouter.route("/update-user-cover-image").patch(verifyJWT, 
-    upload.fields([
-        {
-            name: "avatar",
-            maxCount: 1
-        },
-        {
-            name: "coverImage",
-            maxCount: 1
-        }
-    ])
-    ,updateUserCoverImage
+    upload.single("coverImage"),
+    updateUserCoverImage
 )  // patch or post ?????????????????????????????????????????????
 
 
-// IMPROVE THIS WHOLE CODE 
+
+// GET USER CHANNEL PROFILE
+userRouter.route("/channel/:username").get( verifyJWT, getUserChannelProfile )
+
+
+
+// GET USER WATCH HISTORY
+userRouter.route("/user-watch-history").get( verifyJWT, getWatchHistory )
+
+
 
 export default userRouter;
