@@ -602,11 +602,12 @@ const getUserChannelProfile = asyncHandler( async (req, res) => {
 
     const {username} = req.params
 
+
     if (!username?.trim()) {
         throw new ApiError(400, "Username is missing")
     }
 
-    const channel = User.aggregate([
+    const channel = await User.aggregate([
         {
         $match : {
             username: username?.toLowerCase()
@@ -658,7 +659,8 @@ const getUserChannelProfile = asyncHandler( async (req, res) => {
             }
         }
 
-])
+]).exec();
+
 
 if (!channel?.length) {
         throw new ApiError(404, "Channel does not exists")
@@ -681,7 +683,8 @@ const getWatchHistory = asyncHandler( async (req, res) => {
     const user = await User.aggregate([
         {
             $match: {
-                _id: new Mongoose.Types.ObjectId(req.user._id)
+                _id: req.user._id // This works like a charm now !
+                // new Mongoose.Types.ObjectId(req.user._id) // This has some issues
             }
         },
         {
@@ -718,7 +721,9 @@ const getWatchHistory = asyncHandler( async (req, res) => {
                 ]
             }
         }
-    ])
+    ]).exec();
+
+    console.log(user)
 
     return res
     .status(200)
@@ -744,8 +749,8 @@ export {
     updateAccountDetails, // testing done successfully
     updateUserAvatar, // testing done successfully 
     updateUserCoverImage, // testing done successfully 
-    getUserChannelProfile,
-    getWatchHistory
+    getUserChannelProfile, // testing done successfully 
+    getWatchHistory // testing done, However the way we are passing ids should be rethinked.
 };
 
 
