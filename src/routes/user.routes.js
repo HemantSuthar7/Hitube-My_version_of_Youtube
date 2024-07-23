@@ -52,8 +52,6 @@ userRouter.route("/refresh-token").post(refreshAccessToken)
 
 
 // CHANGE CURRENT PASSWORD - secure route 
-// ++++++++++++++++++++++++++++++++++++++++++++++++
-// RETHINK ON SECURING THIS ROUTE
 userRouter.route("/change-password").post( verifyJWT, changeCurrentPassword )
 
 

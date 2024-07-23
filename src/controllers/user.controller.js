@@ -32,6 +32,7 @@ const generateAccessAndRefreshToken = async (userId) => {
 
 
 
+
 const registerUser = asyncHandler( async (req, res) => {
     
     // LOGIC FOR registerUser:
@@ -182,7 +183,7 @@ const loginUser = asyncHandler( async (req, res) => {
     }
 
 
-
+   
     // find the email or username in the database 
     const existingUser = await User.findOne({
         $or : [{username},{email}]
@@ -239,8 +240,8 @@ const logoutUser = asyncHandler( async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: ""
             }
         },
         {
@@ -456,7 +457,7 @@ const updateAccountDetails = asyncHandler( async (req, res) => {
 
 const updateUserAvatar = asyncHandler( async (req, res) => {
 
-    const avatarLocalPath = req.files?.avatar[0]?.path
+    const avatarLocalPath = req.file?.path
 
     if (!avatarLocalPath) {
         throw new ApiError(400, "Please upload new avatar image")
@@ -508,10 +509,6 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
     const match = OldAvatarUrl.match(regex);
     const public_id = match[1];
 
-    console.log(public_id);
-
-    
-
     const deleteResponse = await deleteFromCloudinary(public_id, "image")
 
     console.log(deleteResponse);
@@ -541,7 +538,7 @@ const updateUserAvatar = asyncHandler( async (req, res) => {
 
 const updateUserCoverImage = asyncHandler( async (req, res) => {
 
-    const coverImageLocalPath = req.files?.coverImage[0]?.path // if file is not present then this gives a fatal error of type error : reading properties of null/undefined
+    const coverImageLocalPath = req.file?.path 
     
     if (!coverImageLocalPath) {
         throw new ApiError(400, "Please upload new avatar image")
@@ -738,22 +735,22 @@ const getWatchHistory = asyncHandler( async (req, res) => {
 
 
 export {
-    registerUser,
-    loginUser, 
-    logoutUser, 
-    refreshAccessToken,
-    changeCurrentPassword,
-    getCurrentUser, 
-    updateAccountDetails,
-    updateUserAvatar, 
-    updateUserCoverImage,
+    registerUser, // testing done successfully
+    loginUser, // testing done successfully
+    logoutUser, // testing done successfully
+    refreshAccessToken, // testing done successfully
+    changeCurrentPassword, // testing done successfully
+    getCurrentUser, // testing done successfully
+    updateAccountDetails, // testing done successfully
+    updateUserAvatar, // testing done successfully 
+    updateUserCoverImage, // testing done successfully 
     getUserChannelProfile,
     getWatchHistory
 };
 
 
 
-// +++++++++++++++++++++++++++++++++++++++++IMPORTANT++++++++++++++++++++++++++++++++++++++++++
+// +++++++++++++++++++++++++++++++++++++++++IMPORTANT++++++++++++++++++++++++++++++++++
 
 /* MAKE SURE THESE THINGS ARE IMPLEMENTED IN ALL METHODS: 
 
@@ -768,5 +765,7 @@ export {
 
         5. Do not let the user see the database or runtime errors. Handle as much errors as possible
 
-        6. Try to implement a forgot password method
+        6. Try to implement a forgot password method 
+
+        7. Also try to get all user details as much as possible and sell it to other companies to make hell lot of profit.
 */
